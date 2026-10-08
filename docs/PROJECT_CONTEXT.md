@@ -8,7 +8,9 @@
 
 Çalıştırılabilir kod, yapılandırma, migration dosyaları ve testler doğruluk kaynağı olmaya devam eder. Dokümanla uyuşmazlık varsa: (1) kodu ve testleri inceleyip gerçek davranışı doğrulayın, (2) dokümanı düzeltin, (3) çalışan kodu yalnızca eski dokümana uydurmak için değiştirmeyin. Mevcut uygulama gerçeklerini, önerilen çalışmaları ve geçmiş doğrulamaları birbirinden ayırın. Tarihli test sonuçlarını ancak kontrolleri gerçekten çalıştırdıktan sonra güncelleyin.
 
-Temel kaynak konumlarına aşağıda bağlantı verilmiştir. Aksi belirtilmedikçe Java sınıfları `dev.orchestrationlab.incident` paketindedir. Bu dokümantasyon değişikliği, uygulama testlerinin yeniden çalıştırıldığını veya servislerin şu anda sağlıklı olduğunu iddia etmez.
+Temel kaynak konumlarına aşağıda bağlantı verilmiştir. Aksi belirtilmedikçe Java sınıfları `dev.orchestrationlab.incident` paketindedir. Dokümantasyon güncellemesi tek başına uygulama testlerinin yeniden çalıştırıldığı veya servislerin şu anda sağlıklı olduğu anlamına gelmez; yeni kontroller ayrıca tarihli kaydedilir.
+
+AI orchestration çalışmaları için kısa [mimari haritası](ai-orchestration/ARCHITECTURE.md), tarihli [durum ve doğrulama kaydı](ai-orchestration/STATE.md) ve kullanıcı yol haritası için ayrılmış [eğitim rehberi](ai-orchestration/LEARNING_GUIDE.md) vardır. Bu dosya esas yaşayan bağlam olarak korunur; yeni rehberler bununla tutarlı tutulur. 2026-10-08 envanter çalışmasında uygulama davranışı değiştirilmedi. Bu ayrı çalışmada backend 83 ve MCP 2 test JDK 25.0.2 ile yeniden geçti, frontend tip kontrolü/derlemesi başarılı oldu; altı çalışan Compose servisi healthy, HTTP sağlık ve Temporal cluster kontrolleri başarılıydı. İlk Java 23/wrapper erişim hataları, yeni çalıştırılan kontrollerin sınırı ve çalıştırılmayan canlı-provider/restart smoke'ları STATE.md içinde açıkça kaydedilmiştir. Yukarıdaki dokümantasyon notu ve aşağıdaki tarihsel kayıtlar bu yeni kontrollerin yerine geçmez.
 
 ## 1. Projenin Kimliği
 

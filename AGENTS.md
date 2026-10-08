@@ -13,3 +13,12 @@
 - Graphify'yi geniş dependency/call graph ve değişiklik etkisi sorularında kullanın; basit okuma/düzenlemelerde graph analizi başlatmayın. Mevcut `graphify-out/graph.json` için `graphify query "<soru>" --budget 1000`, `explain`, `path` ve `affected` kullanın; belirsiz sınıf/metod adlarında tam düğüm kimliğini seçin.
 - Graphify indeksi gerektiğinde `graphify extract . --code-only --no-cluster --max-workers 2` ile yerelde yenilenir; kaynakları değiştirmeyin, üretilen `graphify-out/` dosyalarını Git'e eklemeyin. Semantik/API analizi veya otomatik izleme başlatmayın. AST ilişkilerini kaynak kodla doğrulayın; haricî Maven paketlerinin kenarları bu sürümde grafikten çıkarılır.
 - Kurulum, kullanım ve tarihli doğrulama ayrıntıları: [docs/CODEX_TOOL_SETUP.md](docs/CODEX_TOOL_SETUP.md).
+
+## AI orchestration çalışmaları
+
+- Mevcut çalışan mimariyi koruyun; kod değişikliğinden önce ilgili Spring bileşenlerini ve Docker yapılandırmasını inceleyin.
+- Gerçek entegrasyonları tercih edin. Gereksiz mock/stub servis veya sahte veri eklemeyin; mevcut simülasyonları ve erişim eksiklerini açıkça belirtin.
+- Spring AI, MCP, Temporal veya başka altyapıyı yalnızca somut ihtiyaçta ekleyin; mevcut bağımlılıkları yeniden kurmayın.
+- Güvenlik, test edilebilirlik ve gözlemlenebilirliği önceliklendirin. Production verilerini değiştirmeyin; yıkıcı işlemler için açık kullanıcı onayı alın.
+- [ARCHITECTURE.md](docs/ai-orchestration/ARCHITECTURE.md) kısa mimari haritasıdır; [STATE.md](docs/ai-orchestration/STATE.md) tarihli doğrulamaları, belirsizlikleri ve sıradaki görevi taşır. İlgili çalışmada bunları ve esas yaşayan PROJECT_CONTEXT.md dosyasını tutarlı tutun.
+- Eğitim yol haritası [LEARNING_GUIDE.md](docs/ai-orchestration/LEARNING_GUIDE.md) içine kullanıcı içeriğiyle eklenir; verilmemiş planı veya tamamlanmış eğitim adımlarını uydurmayın.
