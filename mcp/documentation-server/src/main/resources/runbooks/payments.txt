@@ -1,0 +1,2 @@
+Payment latency: inspect downstream timeout rates and pool saturation; correlate read-only evidence before forming a hypothesis.
+Avoid retrying mutating payment operations without an idempotency key. This project exposes no payment action tool.

@@ -1,0 +1,20 @@
+server:
+  address: localhost
+  port: 8080
+  servlet:
+    session:
+      cookie:
+        secure: false
+
+spring:
+  datasource:
+    url: jdbc:postgresql://localhost:5432/${POSTGRES_DB}
+    username: ${POSTGRES_USER}
+    password: ${POSTGRES_PASSWORD}
+  data:
+    redis:
+      host: localhost
+      port: 6379
+      password: ${REDIS_PASSWORD}
+      connect-timeout: 2s
+      timeout: 2s

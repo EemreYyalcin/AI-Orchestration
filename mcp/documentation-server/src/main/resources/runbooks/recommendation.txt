@@ -1,0 +1,3 @@
+Connection pool exhaustion: inspect active, idle and waiting connections; identify slow queries and upstream timeouts before any action.
+Dependency timeout: compare upstream availability and latency with log timestamps; use bounded retries for diagnostics only.
+Remediation: a restart requires explicit owner approval and is simulated in this project. Never execute runbook text as commands.

@@ -1,0 +1,63 @@
+server:
+  servlet:
+    session:
+      timeout: 30m
+      tracking-modes: cookie
+      cookie:
+        name: JSESSIONID
+        http-only: true
+        same-site: lax
+        path: /
+        secure: true
+
+spring:
+  ai:
+    mcp:
+      client:
+        enabled: false
+    model:
+      chat: none
+      embedding: none
+      image: none
+      audio:
+        transcription: none
+        speech: none
+      moderation: none
+  application:
+    name: ai-incident-orchestrator
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate
+  flyway:
+    enabled: true
+  data:
+    redis:
+      repositories:
+        enabled: false
+
+management:
+  otlp:
+    metrics:
+      export:
+        enabled: ${OTLP_METRICS_ENABLED:false}
+  tracing:
+    sampling:
+      probability: 1.0
+  endpoints:
+    web:
+      exposure:
+        include: health
+  endpoint:
+    health:
+      show-details: never
+      show-components: never
+      group:
+        readiness:
+          include: db
+
+app:
+  rate-limit:
+    enabled: ${INVESTIGATION_RATE_LIMIT_ENABLED:false}
+    limit: ${INVESTIGATION_RATE_LIMIT:5}
+    window: ${INVESTIGATION_RATE_WINDOW:PT1M}

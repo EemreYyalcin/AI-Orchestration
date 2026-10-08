@@ -1,0 +1,5 @@
+database connection pool exhausted	DATABASE	DATABASE
+HTTP dependency timeout	DEPENDENCY	LOGS
+application null pointer failures	APPLICATION	LOGS
+latency degradation slow responses	PERFORMANCE	METRICS
+something is wrong	UNKNOWN	LOGS

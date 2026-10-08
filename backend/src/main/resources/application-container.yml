@@ -1,0 +1,24 @@
+server:
+  address: 0.0.0.0
+  port: 8080
+  servlet:
+    session:
+      cookie:
+        secure: false # Local HTTP only. Production TLS must restore true.
+spring:
+  datasource:
+    url: jdbc:postgresql://postgres:5432/${POSTGRES_DB}
+    username: ${POSTGRES_USER}
+    password: ${POSTGRES_PASSWORD}
+  data:
+    redis:
+      host: redis
+      port: 6379
+      password: ${REDIS_PASSWORD}
+      connect-timeout: 2s
+      timeout: 2s
+app:
+  rate-limit:
+    enabled: true
+  mcp:
+    documentation-url: http://documentation-mcp-server:8081

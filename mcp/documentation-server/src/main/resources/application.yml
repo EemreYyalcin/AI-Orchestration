@@ -1,0 +1,33 @@
+server:
+  address: ${MCP_BIND_ADDRESS:localhost}
+  port: ${MCP_PORT:8081}
+spring:
+  application:
+    name: documentation-mcp-server
+  ai:
+    mcp:
+      client:
+        enabled: false
+      server:
+        name: documentation-runbooks
+        version: 1.0.0
+        protocol: STREAMABLE
+        type: SYNC
+        request-timeout: 3s
+        capabilities:
+          tool: true
+          resource: false
+          prompt: false
+          completion: false
+management:
+  otlp:
+    metrics:
+      export:
+        enabled: ${OTLP_METRICS_ENABLED:false}
+  endpoints:
+    web:
+      exposure:
+        include: health
+  endpoint:
+    health:
+      show-details: never

@@ -1,0 +1,15 @@
+spring:
+  temporal:
+    namespace: default
+    connection:
+      target: ${TEMPORAL_ADDRESS:localhost:7233}
+    workers:
+      - task-queue: incident-investigations-v1
+        name: investigation-worker
+        workflow-classes:
+          - dev.orchestrationlab.incident.workflow.InvestigationWorkflowImpl
+        activity-beans:
+          - investigationActivities
+app:
+  workflow:
+    approval-timeout: ${APPROVAL_TIMEOUT:PT1H}
