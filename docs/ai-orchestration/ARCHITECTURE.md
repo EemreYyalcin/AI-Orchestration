@@ -1,5 +1,7 @@
 # AI Incident Orchestrator — mimari haritası
 
+2026-10-11: Kaynakların sınıf/metot başlarına Türkçe açıklamalar eklendi; mimari ve çalışma sözleşmeleri değişmedi. İlk kez kod okuyacak kişi için [Türkçe kod rehberi](../KOD_REHBERI.md) okuma sırasını, terimleri ve korunmuş migration dosyalarını açıklar. Bu açıklama çalışmasının yeni kontrolleri [STATE.md](STATE.md) içinde ayrı tarihlidir.
+
 Kaynak incelemesi: **2026-10-08**. Bu dosya mevcut sistemi özetler; ayrıntılı yaşayan bağlam [PROJECT_CONTEXT.md](../PROJECT_CONTEXT.md), tarihli kontroller [STATE.md](STATE.md) içindedir. Çalıştırılabilir kod ve yapılandırma doğruluk kaynağıdır. Bu görev yalnızca dokümantasyon değiştirir.
 
 ## Depo ve bileşenler

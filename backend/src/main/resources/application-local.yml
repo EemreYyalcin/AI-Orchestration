@@ -1,3 +1,5 @@
+# IDE/Maven ile host üzerinde geliştirme: servisler localhost’tadır, Secure çerez yerel HTTP için kapanır.
+# Ortam değişkenleri Maven/IDE tarafından .env dosyasından otomatik yüklenmez.
 server:
   address: localhost
   port: 8080

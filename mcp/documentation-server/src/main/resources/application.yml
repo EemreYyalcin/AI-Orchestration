@@ -1,3 +1,4 @@
+# Bağımsız özel runbook sunucusu: host’ta localhost, Dockerfile ortam ayarıyla container’da 0.0.0.0.
 server:
   address: ${MCP_BIND_ADDRESS:localhost}
   port: ${MCP_PORT:8081}
@@ -9,6 +10,7 @@ spring:
       client:
         enabled: false
       server:
+        # Resmi Streamable HTTP/SYNC MCP; yalnızca sabit salt okunur araç yeteneği açıktır.
         name: documentation-runbooks
         version: 1.0.0
         protocol: STREAMABLE
@@ -20,6 +22,7 @@ spring:
           prompt: false
           completion: false
 management:
+  # Sadece genel sağlık ucu yayınlanır; dış metrik aktarımı açıkça etkinleştirilmedikçe kapalıdır.
   otlp:
     metrics:
       export:

@@ -1,3 +1,5 @@
+# ai profili gerçek OpenAI ChatModel’i açar; geçerli API anahtarı ve hesabın erişebildiği model adı gerekir.
+# İletişim/SDK tekrarı kapalıdır; şema advisor’ı, anlamsal servis ve Activity tekrarları ayrı katmanlardır.
 spring:
   ai:
     model:

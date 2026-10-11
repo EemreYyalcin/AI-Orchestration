@@ -24,15 +24,25 @@ import dev.orchestrationlab.incident.authentication.infrastructure.oidc.Discardi
 import dev.orchestrationlab.incident.authentication.infrastructure.oidc.GoogleOidcUserService;
 import dev.orchestrationlab.incident.user.application.UserProvisioningService;
 
+/**
+ * Servlet HTTP güvenlik zincirini tanımlar: Google OIDC girişi, sunucu oturumu, CSRF ve izinli yollar.
+ * API kimliksiz çağrılarda 401 alır; form/basic giriş kapalıdır ve kalan yollar reddedilir.
+ */
 @Configuration(proxyBeanMethods = false)
 @ConditionalOnWebApplication(type = ConditionalOnWebApplication.Type.SERVLET)
 public class SecurityConfiguration {
 
+    /**
+     * İstemci kaydı varsa OIDC girişini ve kullanıcı kayıt adaptörünü bağlar. Sağlık/CSRF ve Google
+     * protokol yollarını açar, diğer API yollarını oturumla korur. Oturum kimliğini girişte yeniler;
+     * POST /logout CSRF denetiminden sonra oturumu ve çerezi temizleyip 204 döndürür. Google kaydı
+     * yokken yerel altyapı yine başlatılabilir.
+     */
     @Bean
     SecurityFilterChain securityFilterChain(HttpSecurity http,
             ObjectProvider<ClientRegistrationRepository> registrations,
             ObjectProvider<UserProvisioningService> provisioning) throws Exception {
-        // Local infrastructure can still boot without credentials. Activate the google profile for login.
+        // Yerel altyapı dış kimlik bilgisi olmadan açılır; giriş için google profili gerekir.
         if (registrations.getIfAvailable() != null) {
             http.oauth2Login(oauth -> oauth
                     .authorizedClientRepository(new DiscardingAuthorizedClientRepository())

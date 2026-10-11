@@ -10,9 +10,18 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.server.LocalServerPort;
 import static org.assertj.core.api.Assertions.*;
 
+/**
+ * Rastgele portta gerçek Spring MCP sunucusu ve resmi Streamable HTTP istemcisiyle keşif/araç
+ * çağrısını sınar. Ayrıca dosya yolu ve limit girdi saldırıları reddedilir; canlı internet
+ * dokümantasyonu aranmaz.
+ */
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 class McpServerIntegrationTest {
     @LocalServerPort int port;
+    /**
+     * Sunucu kimliğini, tek searchDocumentation yeteneğini ve recommendation runbook çağrısının kaynak
+     * etiketli içeriğini gerçek MCP protokolünde doğrular.
+     */
     @Test void realStreamableClientDiscoversAndCallsLocalCorpus() {
         try (var client = McpClient.sync(HttpClientStreamableHttpTransport.builder("http://localhost:" + port).build())
                 .requestTimeout(Duration.ofSeconds(5)).build()) {
@@ -25,6 +34,10 @@ class McpServerIntegrationTest {
             assertThat(response.content().toString()).contains("Connection pool", "runbook:recommendation");
         }
     }
+    /**
+     * Path traversal servis değeri ve 99 öğelik sınır dışı isteğin RunbookTools doğrulamasında
+     * reddedildiğini kontrol eder.
+     */
     @Test void invalidServiceCannotReadArbitraryFiles() {
         var tools = new RunbookTools();
         assertThatThrownBy(() -> tools.searchDocumentation(new RunbookTools.Input("../../secrets", RunbookTools.Topic.RUNBOOK, 1)))

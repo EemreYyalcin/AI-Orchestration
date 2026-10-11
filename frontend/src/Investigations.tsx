@@ -1,6 +1,12 @@
 import { useEffect, useState } from 'react';
 
+/** Ana bileşenden alınan, mevcut oturuma bağlı POST koruma bilgisi. */
 type Csrf = { token: string; headerName: string };
+/**
+ * İnceleme API görünümünün bu ekranda kullanılan kısmıdır; rapor sentez tamamlanana kadar null olabilir.
+ * degraded eksik/kırpılmış veya fallback sonucu, diagnosticSourcesSimulated simüle teşhis kaynağını belirtir.
+ * evidenceIds bulguların atıflarıdır; öneriler otomatik yürütme yetkisi vermez.
+ */
 type Investigation = {
   id: string; status: string; approval: string;
   report: null | {
@@ -11,7 +17,14 @@ type Investigation = {
   };
 };
 
+// Yanıt doğrulamasında kabul edilen kapalı durum kümesi backend InvestigationStatus ile eşleşir.
 const statuses = ['CREATED', 'ANALYZING', 'COLLECTING_EVIDENCE', 'REASONING', 'WAITING_APPROVAL', 'COMPLETED', 'FAILED'];
+/**
+ * Çerezli ve varsayılan 10 saniye sınırlı API isteğini yapar; kimlik/durum alanlarını doğrular.
+ * Oluşturma 503 verse de kaydedilmiş inceleme görünümü içerebilir: pending=true ile kimlik korunur.
+ * Kontrol yalnızca id/status alanlarını doğrular; iç rapor tam şema doğrulamasından geçirilmez.
+ * Genel bir 503 ProblemDetail görünüm taşımıyorsa hata üretilir, kullanıcı durumu tekrar okumalıdır.
+ */
 async function fetchInvestigation(path: string, init: RequestInit = {}): Promise<{ value: Investigation; pending: boolean }> {
   const response = await fetch(path, { credentials: 'same-origin', cache: 'no-store', signal: AbortSignal.timeout(10000), ...init });
   if (!response.ok && response.status !== 503) throw new Error(response.status === 401 ? 'Your session expired. Sign in again.'
@@ -23,6 +36,12 @@ async function fetchInvestigation(path: string, init: RequestInit = {}): Promise
   return { value: value as Investigation, pending: response.status === 503 };
 }
 
+/**
+ * Tek incelemenin oluşturma, durum sorgulama, tekrar başlatma ve sahip onay/ret ekranıdır.
+ * Kimlik yalnızca bileşen state’inde tutulur; sayfa yenilenince seçim kaybolur, geçmiş listesi yoktur.
+ * Model metni React metin alanlarında escape edilerek gösterilir; HTML olarak çalıştırılmaz.
+ * getCsrf ana oturum bileşeninden güncel POST koruma bilgisini getirir.
+ */
 export default function Investigations({ getCsrf }: { getCsrf: () => Promise<Csrf> }) {
   const [question, setQuestion] = useState('Why is the recommendation service failing?');
   const [value, setValue] = useState<Investigation | null>(null);
@@ -31,10 +50,13 @@ export default function Investigations({ getCsrf }: { getCsrf: () => Promise<Csr
   const [polling, setPolling] = useState(true);
   const id = value?.id;
   const terminal = value?.status === 'COMPLETED' || value?.status === 'FAILED';
+  // Sonlanmamış incelemeyi ilk kez 1 saniye, sonra 2 saniye aralıkla oku.
+  // Hata polling’i durdurur; kullanıcı Refresh status ile yeniden açar. Temizlik timer’ı iptal eder.
   useEffect(() => {
     if (!id || terminal || !polling) return;
     let active = true;
     let timer: ReturnType<typeof setTimeout>;
+    /** Güncel sahipli görünümü alır; active ise state’i yeniler ve bir sonraki sorgulamayı planlar. */
     async function poll() {
       try {
         const result = await fetchInvestigation(`/api/investigations/${encodeURIComponent(id!)}`);
@@ -45,6 +67,11 @@ export default function Investigations({ getCsrf }: { getCsrf: () => Promise<Csr
     return () => { active = false; clearTimeout(timer); };
   }, [id, terminal, polling]);
 
+  /**
+   * action verilmezse soru gövdesiyle oluşturur; verilirse mevcut kimlik üzerinde run/approve/deny çağırır.
+   * Her POST öncesi taze CSRF alır, işlem boyunca düğmeleri meşgul tutar ve sonucu polling’e bağlar.
+   * pending başlangıçta aynı kimlik korunur; belirsiz karar hatasında tekrar karardan önce durum okunmalıdır.
+   */
   async function mutate(action?: 'approve' | 'deny' | 'run') {
     setBusy(true); setMessage('');
     try {

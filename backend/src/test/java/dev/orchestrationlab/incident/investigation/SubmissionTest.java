@@ -7,7 +7,15 @@ import dev.orchestrationlab.incident.investigation.application.*;
 import dev.orchestrationlab.incident.orchestration.application.InvestigationExecution;
 import static org.assertj.core.api.Assertions.*;
 import static org.mockito.Mockito.*;
+/**
+ * Başvuru koordinasyonunu bağımlılık mock’larıyla sınar: kabul reddi maliyetli işe ulaşmamalı,
+ * Temporal kesintisi kaydedilmiş kimliği kaybettirmemelidir.
+ */
 class SubmissionTest {
+    /**
+     * Kalıcı başlatma 503 verdiğinde aynı kaydedilmiş görünümün pendingStart=true ile döndüğünü
+     * doğrular; tamamlanmış başlatma iddiası yapılmaz.
+     */
     @Test void temporalOutageRetainsSavedIdAndDoesNotClaimStarted() {
         UUID owner = UUID.randomUUID(), id = UUID.randomUUID();
         var store = mock(InvestigationService.class); var execution = mock(InvestigationExecution.class);
@@ -18,6 +26,9 @@ class SubmissionTest {
         assertThat(result.pendingStart()).isTrue(); assertThat(result.investigation().id()).isEqualTo(id);
         verify(limiter).acquire(owner);
     }
+    /**
+     * Kabul sınırlayıcısı reddettiğinde kayıt ve yürütme servisleriyle etkileşim olmadığını doğrular.
+     */
     @Test void admissionFailurePreventsPersistenceAndModelWorkflowCost() {
         UUID owner = UUID.randomUUID(); var store = mock(InvestigationService.class); var execution = mock(InvestigationExecution.class);
         var limiter = mock(InvestigationStartLimiter.class);

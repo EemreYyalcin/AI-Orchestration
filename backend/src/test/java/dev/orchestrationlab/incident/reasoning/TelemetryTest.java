@@ -7,7 +7,15 @@ import dev.orchestrationlab.incident.observability.InvestigationTelemetry;
 import dev.orchestrationlab.incident.tool.application.*;
 import java.time.Duration;
 import static org.assertj.core.api.Assertions.*;
+/**
+ * Bellek içi Micrometer registry ile ölçüm sözleşmesini sınar. Kullanıcı/inceleme/soru alanları
+ * sınırsız metrik etiketlerine dönüşmemelidir.
+ */
 class TelemetryTest {
+    /**
+     * Timeout, onay bekleme ve tamamlanma metriklerini kontrol eder;
+     * owner.id/investigation.id/question etiketlerinin metriklere yazılmadığını doğrular.
+     */
     @Test void boundedMetricsRecordTimeoutAndApprovalWithoutUserLabels() {
         var meters = new SimpleMeterRegistry(); var telemetry = new InvestigationTelemetry(meters, ObservationRegistry.create(), new MockEnvironment());
         telemetry.tool(ToolResult.failed(ToolKind.LOGS, ToolResult.Failure.TIMEOUT), 1000);

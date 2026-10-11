@@ -9,12 +9,19 @@ import dev.orchestrationlab.incident.orchestration.application.IncidentOrchestra
 import dev.orchestrationlab.incident.user.domain.*;
 import dev.orchestrationlab.incident.user.repository.AppUserRepository;
 import static org.assertj.core.api.Assertions.*;
-/** Explicit optional smoke: requires separately running documentation MCP on localhost:8081. */
+/**
+ * Açıkça seçilen yerel MCP/kalıcılık smoke kontrolüdür; standart test seçiminde çalışmaz.
+ * Yapılandırılmış uzak runbook sunucusu ve PostgreSQL gerektirir; teşhis kaynakları simüle kalır.
+ */
 @SpringBootTest @ActiveProfiles("mcp") @Import(InvestigationIntegrationTest.Database.class)
 class McpInvestigationSmoke {
     @Autowired InvestigationService investigations;
     @Autowired IncidentOrchestrator orchestrator;
     @Autowired AppUserRepository users;
+    /**
+     * Uzak MCP runbook kanıtının inceleme paketine ve kalıcı kayda geçtiğini doğrular; gerçek
+     * operasyonel log veya canlı model kalitesi ölçmez.
+     */
     @Test void remoteRunbookIsCollectedIntoPersistedInvestigationContext() {
         var owner = users.saveAndFlush(new AppUser(UserProvider.GOOGLE, "mcp-smoke", null, null, null)).getId();
         var investigation = investigations.create(owner, "recommendation database connection pool failing");

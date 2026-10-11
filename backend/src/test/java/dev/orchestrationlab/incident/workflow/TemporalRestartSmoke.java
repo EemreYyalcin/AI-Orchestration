@@ -11,8 +11,16 @@ import dev.orchestrationlab.incident.investigation.domain.ApprovalDecision;
 import static org.assertj.core.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
-/** Explicit optional smoke: -Dtest=TemporalRestartSmoke; requires local Temporal. */
+/**
+ * Açıkça seçilen, gerçek yerel Temporal servisi gerektiren restart smoke kontrolüdür. WorkerFactory
+ * yeniden başlatmasını sınar; Activity’ler mock’tur ve standart test seçiminde çalışmaz.
+ */
 class TemporalRestartSmoke {
+    /**
+     * İlk worker’da onay bekleyen workflow’u ikinci worker’a replay ettirir. Tamamlanmış
+     * sınıflandırma/toplama Activity’leri tekrar çağrılmadan sahip onayının tamamlandığını doğrular;
+     * factory ve servis kaynaklarını kapatır.
+     */
     @Test void actualServiceReplaysPendingApprovalAfterWorkerFactoryRestart() throws Exception {
         var service = WorkflowServiceStubs.newLocalServiceStubs();
         var client = WorkflowClient.newInstance(service);

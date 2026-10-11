@@ -25,7 +25,16 @@ import dev.orchestrationlab.incident.user.domain.UserProvider;
 import static org.assertj.core.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
+/**
+ * OIDC kullanıcı adaptörünün güvenilir profil eşlemesini ve kayıt hatası davranışını test eder.
+ * Sağlayıcı ve kayıt servisi mock’tur; gerçek Google girişi veya PostgreSQL entegrasyonu kanıtı
+ * değildir.
+ */
 class GoogleOidcUserServiceTest {
+    /**
+     * Doğrulanmış OIDC alanlarının ExternalIdentity’ye aktarıldığını ve principal adının Google
+     * subject yerine dahili UUID olduğunu doğrular.
+     */
     @Test
     void mapsValidatedClaimsAndKeepsInternalUuidSeparateFromSubject() {
         var provisioning = mock(UserProvisioningService.class);
@@ -50,6 +59,10 @@ class GoogleOidcUserServiceTest {
         assertThat(principal.getSubject()).isEqualTo("opaque-google-subject");
     }
 
+    /**
+     * Kullanıcı kaydı hatasının OAuth2AuthenticationException olduğunu doğrular; başarısız kayıt
+     * doğrulanmış girişe dönüşmemelidir.
+     */
     @Test
     void databaseFailureIsAuthenticationFailure() {
         var provisioning = mock(UserProvisioningService.class);
@@ -61,6 +74,10 @@ class GoogleOidcUserServiceTest {
                 .hasMessage("Unable to complete sign in");
     }
 
+    /**
+     * Test ID token’ı ve google istemci kaydıyla OidcUserRequest oluşturur; canlı sağlayıcıya
+     * bağlanmaz.
+     */
     private static OidcUserRequest request(OidcIdToken token) {
         ClientRegistration google = CommonOAuth2Provider.GOOGLE.getBuilder("google")
                 .clientId("test-client").clientSecret("test-secret").build();

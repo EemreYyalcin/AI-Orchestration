@@ -1,5 +1,8 @@
 # AI Incident Orchestrator
 
+Türkçe kaynak açıklamalarını takip etmek için [kod okuma rehberini](docs/KOD_REHBERI.md) okuyun.
+Sınıf ve metot başlarındaki Javadoc’lar sorumlulukları, iş kurallarını ve güvenlik sınırlarını açıklar.
+
 AI incident investigation with deterministic Java orchestration, bounded
 evidence tools, optional Spring AI/OpenAI, documentation MCP and durable
 Temporal approval workflows. Existing Google OIDC, HttpSession and CSRF remain.

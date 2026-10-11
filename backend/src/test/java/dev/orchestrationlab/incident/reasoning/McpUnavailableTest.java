@@ -10,7 +10,15 @@ import dev.orchestrationlab.incident.tool.infrastructure.McpDocumentationAdapter
 import static org.assertj.core.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
+/**
+ * İsteğe bağlı uzak MCP kaynağının erişilememesinin sınırlı ve tipli araç hatasına dönüştüğünü sınar;
+ * kaynak olarak erişilemeyen yerel port kullanılır.
+ */
 class McpUnavailableTest {
+    /**
+     * Yetkili DOCUMENTATION çağrısında bağlantı kurulamadığında UNAVAILABLE veya TIMEOUT ve boş kanıt
+     * listesi bekler; havuz kaynağını kapatır.
+     */
     @Test void unavailableOptionalMcpIsBoundedEvidenceFailure() {
         var repository = mock(InvestigationRepository.class);
         UUID owner = UUID.randomUUID(), id = UUID.randomUUID();

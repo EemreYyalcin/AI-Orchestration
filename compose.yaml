@@ -1,7 +1,10 @@
+# Altı servisli yerel geliştirme ortamı. Tarayıcı yalnızca frontend portuna gider;
+# backend ve MCP özel ağdadır. PostgreSQL görünümü ve Temporal geçmişi ayrı volume’larda tutulur.
 name: ai-incident-orchestrator
 
 services:
   frontend:
+    # React üretim paketi nginx ile sunulur; API/OIDC/çıkış aynı origin üzerinden proxy edilir.
     build:
       context: .
       dockerfile: frontend/Dockerfile
@@ -17,6 +20,8 @@ services:
       retries: 10
 
   backend:
+    # Spring MVC API ve Temporal worker aynı Java sürecindedir. Varsayılan model çevrimdışıdır;
+    # google/ai profilleri yalnızca ilgili dış kimlik bilgileri sağlanınca eklenir.
     build:
       context: .
       dockerfile: backend/Dockerfile
@@ -50,6 +55,7 @@ services:
       start_period: 30s
 
   documentation-mcp-server:
+    # Paketlenmiş runbook’ları gerçek MCP protokolüyle sunar; host portu yayınlanmaz.
     build:
       context: .
       dockerfile: mcp/documentation-server/Dockerfile
@@ -61,6 +67,7 @@ services:
       start_period: 20s
 
   temporal:
+    # start-dev yerel kalıcı geçmiş ve onay zamanlayıcısı sağlar; production cluster değildir.
     image: temporalio/temporal:1.9.1
     command: ["server", "start-dev", "--ip", "0.0.0.0", "--db-filename", "/home/temporal/temporal.db"]
     ports:
@@ -76,6 +83,7 @@ services:
       start_period: 10s
 
   postgres:
+    # Kullanıcı/inceleme/JSONB rapor/denetim/mock eylem kalıcılığı; şemayı backend Flyway yönetir.
     image: postgres:18
     environment:
       POSTGRES_DB: ${POSTGRES_DB:?Set POSTGRES_DB in .env}
@@ -93,6 +101,7 @@ services:
       start_period: 10s
 
   redis:
+    # Yalnızca geçici kullanıcı başına kabul sayacı: RDB/AOF kapalı, yeniden başlatmada sayaçlar sıfırlanır.
     image: redis:8
     environment:
       REDIS_PASSWORD: ${REDIS_PASSWORD:?Set REDIS_PASSWORD in .env}
@@ -110,5 +119,6 @@ services:
       start_period: 5s
 
 volumes:
+  # compose down bu verileri korur; down --volumes PostgreSQL ve workflow geçmişini siler.
   temporal_data:
   postgres_data:

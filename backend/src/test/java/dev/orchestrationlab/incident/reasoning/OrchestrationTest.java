@@ -8,7 +8,15 @@ import dev.orchestrationlab.incident.orchestration.application.SynthesisService;
 import dev.orchestrationlab.incident.tool.application.ToolKind;
 import static org.assertj.core.api.Assertions.*;
 
+/**
+ * Paralel kanıt okuma/birleştirme ve sentez atıf doğrulamasını kontrollü bağımlılıklarla sınar.
+ * Geçersiz model atıfları güvenli fallback’e dönüşmelidir.
+ */
 class OrchestrationTest {
+    /**
+     * Latch ile bağımsız okumaların birlikte başladığını doğrular. İsteğe bağlı dokümantasyon hatası
+     * bir kez tekrar edilir; log kanıtı korunup paket degraded olur.
+     */
     @Test void fanOutRunsIndependentReadsBeforeFanInAndOptionalFailureIsDegraded() throws Exception {
         var execution = org.mockito.Mockito.mock(dev.orchestrationlab.incident.tool.application.ToolExecutionService.class);
         var entered = new java.util.concurrent.CountDownLatch(2);
@@ -29,6 +37,10 @@ class OrchestrationTest {
             var close = collector.getClass().getDeclaredMethod("close"); close.setAccessible(true); close.invoke(collector);
         }
     }
+    /**
+     * Uydurma kimlikli sentezin iki kez reddedildiğini, sonra gerçek atıflı NONE fallback’inin
+     * degraded olarak döndüğünü sınar.
+     */
     @Test void invalidCitationsRetryThenUseExplicitConservativeFallback() {
         var bundle = new EvidenceBundle(List.of(new Evidence("LOGS-1", ToolKind.LOGS, "observed timeout")), List.of(), false);
         var attempts = new AtomicInteger();
@@ -37,6 +49,10 @@ class OrchestrationTest {
         assertThat(attempts.get()).isEqualTo(2); assertThat(result.degraded()).isTrue();
         assertThat(result.synthesis().proposedAction()).isEqualTo(IncidentSynthesis.ProposedAction.NONE);
     }
+    /**
+     * Tek atıf ve verilen öneriyle küçük tipli sentez fixture’ı oluşturur.
+     * @param id İşlem yapılan dahili kayıt veya kanıt kimliği.
+     */
     private IncidentSynthesis answer(String id, IncidentSynthesis.ProposedAction action) {
         return new IncidentSynthesis("bounded answer", List.of(), List.of(), Set.of(id), action);
     }

@@ -7,7 +7,15 @@ import java.time.Duration;
 import java.util.UUID;
 import static org.mockito.Mockito.*;
 import static org.assertj.core.api.Assertions.*;
+/**
+ * Temporal TestWorkflowEnvironment içinde gerçek start-to-close zaman aşımı ve sınırlı Activity
+ * tekrarını sınar; yalnızca simüle exception testi değildir.
+ */
 class ActivityTimeoutTest {
+    /**
+     * 100 ms süre sınırını aşan 500 ms Activity ile üç denemenin tükendiğini, workflow’un FAILED
+     * olduğunu ve hata görünümü Activity’sinin çağrıldığını doğrular.
+     */
     @Test @Timeout(15) void actualStartToCloseDeadlineExhaustsBoundedRetryAndMarksFailure() {
         try (var env = TestWorkflowEnvironment.newInstance()) {
             var worker = env.newWorker("deadline-test");

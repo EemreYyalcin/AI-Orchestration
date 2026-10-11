@@ -7,11 +7,13 @@
         <version>4.1.1</version><relativePath/>
     </parent>
     <groupId>dev.orchestrationlab</groupId><artifactId>documentation-mcp-server</artifactId><version>0.0.1-SNAPSHOT</version>
+    <!-- Backend ile aynı Java/Spring AI sürümleri; bu modül bağımsız JAR ve HTTP süreçtir. -->
     <properties><java.version>25</java.version><spring-ai.version>2.0.1</spring-ai.version></properties>
     <dependencyManagement><dependencies><dependency>
         <groupId>org.springframework.ai</groupId><artifactId>spring-ai-bom</artifactId><version>${spring-ai.version}</version>
         <type>pom</type><scope>import</scope>
     </dependency></dependencies></dependencyManagement>
+    <!-- Resmi MVC MCP sunucusu çalışma zamanı; MCP istemcisi yalnızca gerçek protokol testlerinde kullanılır. -->
     <dependencies>
         <dependency><groupId>org.springframework.boot</groupId><artifactId>spring-boot-starter-opentelemetry</artifactId></dependency>
         <dependency><groupId>org.springframework.ai</groupId><artifactId>spring-ai-starter-mcp-server-webmvc</artifactId></dependency>

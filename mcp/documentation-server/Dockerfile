@@ -1,3 +1,4 @@
+# Ayrı MCP modülü backend’in aynı checksum kontrollü Maven Wrapper’ıyla derlenir; testler burada atlanır.
 FROM eclipse-temurin:25-jdk AS build
 RUN apt-get update && apt-get install -y --no-install-recommends unzip && rm -rf /var/lib/apt/lists/*
 WORKDIR /build
@@ -6,6 +7,7 @@ COPY backend/.mvn/ ./.mvn/
 COPY mcp/documentation-server/ ./
 RUN chmod +x mvnw && ./mvnw --batch-mode -DskipTests package
 
+# Runbook dosyaları JAR içinde paketlidir; root olmayan kullanıcıyla özel HTTP MCP sunucusu çalışır.
 FROM eclipse-temurin:25-jre
 RUN apt-get update && apt-get install -y --no-install-recommends curl && rm -rf /var/lib/apt/lists/* && useradd --uid 10001 --create-home app
 WORKDIR /app

@@ -6,23 +6,37 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.oauth2.client.OAuth2AuthorizedClient;
 import org.springframework.security.oauth2.client.web.OAuth2AuthorizedClientRepository;
 
-/** Login needs protocol tokens temporarily; this application does not call Google APIs afterward. */
+/**
+ * OAuth2 access/refresh token’larının giriş sonrasında saklanmasını engelleyen repository
+ * uygulamasıdır. Uygulama Google API’lerini daha sonra çağırmadığından yetkilendirilmiş istemci
+ * deposuna ihtiyaç duymaz; principal’daki OIDC ID token ayrı bir konudur.
+ */
 public final class DiscardingAuthorizedClientRepository implements OAuth2AuthorizedClientRepository {
+    /**
+     * Saklanmış istemci bulunmadığını null ile bildirir; access/refresh token yüklemez.
+     */
     @Override
     public <T extends OAuth2AuthorizedClient> T loadAuthorizedClient(
             String registrationId, Authentication principal, HttpServletRequest request) {
         return null;
     }
 
+    /**
+     * Giriş değişimi ve UserInfo okuması için kullanılan istemciyi bilerek saklamaz. Bu boş uygulama
+     * access/refresh token kalıcılığını önler.
+     */
     @Override
     public void saveAuthorizedClient(OAuth2AuthorizedClient client, Authentication principal,
                                      HttpServletRequest request, HttpServletResponse response) {
-        // Deliberately discard access/refresh tokens after the login exchange and UserInfo loading.
+        // Giriş değişimi ve UserInfo okumasından sonra access/refresh token’larını bilerek saklama.
     }
 
+    /**
+     * Tutulan bir istemci kaydı olmadığı için silme isteğinde işlem yapmaz.
+     */
     @Override
     public void removeAuthorizedClient(String registrationId, Authentication principal,
                                        HttpServletRequest request, HttpServletResponse response) {
-        // No retained authorized client to remove.
+        // Saklanan yetkilendirilmiş istemci olmadığı için silinecek kayıt yoktur.
     }
 }

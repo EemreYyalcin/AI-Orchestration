@@ -1,3 +1,4 @@
+/* Uygulamanın ortak yazı tipi, metin/zemin rengi ve satır aralığı. */
 :root {
   font-family: system-ui, sans-serif;
   color: #172033;
@@ -5,12 +6,15 @@
   line-height: 1.5;
 }
 
+/* Tarayıcının varsayılan sayfa kenar boşluğunu kaldırır. */
 body { margin: 0; }
 
+/* Ana içeriği okunabilir genişlikte ortalar; iç boşluk mobilde kenarlara yapışmayı önler. */
 main {
   max-width: 48rem;
   margin: 12vh auto;
   padding: 2rem;
 }
 
+/* Başlık ekran genişliğine uyum sağlar, fakat alt/üst yazı boyutu sınırlarını aşmaz. */
 h1 { font-size: clamp(1.7rem, 5vw, 2.5rem); }

@@ -11,17 +11,35 @@ import java.util.UUID;
 import java.time.Duration;
 import static org.assertj.core.api.Assertions.*;
 
-/** Explicit local smoke only: seeds disposable fixtures; restarts the local backend container. */
+/**
+ * Açıkça seçilen yerel bütünleşik smoke kontrolüdür; sentetik kayıt ekler ve yerel backend
+ * container’ını yeniden başlatır. Standart verify seçiminde çalışmaz; tam Compose stack ve yerel
+ * altyapı kimlik bilgileri gerektirir. Production verileri üzerinde çalıştırılmamalıdır.
+ */
 class ContainerStackSmoke {
+    /**
+     * Ortam değişkenleriyle localhost PostgreSQL’e JDBC bağlantısı açar; çağıran try-with-resources
+     * ile kapatır.
+     */
     private Connection database() throws SQLException {
         return DriverManager.getConnection("jdbc:postgresql://localhost:5432/" + System.getenv("POSTGRES_DB"),
                 System.getenv("POSTGRES_USER"), System.getenv("POSTGRES_PASSWORD"));
     }
+    /**
+     * Sentetik incelemenin PostgreSQL status alanını parametrik sorguyla okur; restart sonrası kalıcı
+     * görünümü izlemek için kullanılır.
+     * @param id İşlem yapılan dahili kayıt veya kanıt kimliği.
+     */
     private String status(UUID id) throws SQLException {
         try (var connection = database(); var query = connection.prepareStatement("SELECT status FROM incident_investigations WHERE id = ?")) {
             query.setObject(1, id); try (var result = query.executeQuery()) { result.next(); return result.getString(1); }
         }
     }
+    /**
+     * Sentetik sahip/başlatma niyeti ekler, onay beklenince yerel backend container’ını yeniden
+     * başlatır. MCP kanıtı, kalıcı onay ve tek mock eylemi kontrol edip eklediği test satırlarını
+     * finally içinde temizler; gerçek Google tarayıcı girişi testi değildir.
+     */
     @Test @Timeout(120) void realStackCollectsMcpEvidenceSurvivesBackendProcessRestartAndExecutesOneMockAction() throws Exception {
         UUID owner = UUID.randomUUID(), id = UUID.randomUUID();
         try (var connection = database()) {

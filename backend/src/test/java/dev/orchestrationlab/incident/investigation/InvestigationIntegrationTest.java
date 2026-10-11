@@ -21,12 +21,24 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.*;
 
+/**
+ * İnceleme API’si, sahiplik, JSONB kalıcılığı ve senkron yaşam döngüsünü gerçek PostgreSQL ile sınar.
+ * Test kimlikleri açıkça oluşturulur; model/operasyonel kanıtlar çevrimdışı simülasyondur.
+ */
 @SpringBootTest
 @AutoConfigureMockMvc
 @Import(InvestigationIntegrationTest.Database.class)
 class InvestigationIntegrationTest {
+    /**
+     * Bu test sınıfına gerçek PostgreSQL 18 Testcontainer sağlayan yapılandırmadır; @ServiceConnection
+     * bağlantı özelliklerini Spring’e aktarır.
+     */
     @TestConfiguration(proxyBeanMethods = false)
     static class Database {
+        /**
+         * İzole PostgreSQL 18 test container’ı oluşturur; yaşam döngüsünü Spring/Testcontainers
+         * yönetir.
+         */
         @Bean @ServiceConnection PostgreSQLContainer postgres() { return new PostgreSQLContainer("postgres:18"); }
     }
     @Autowired MockMvc mvc;
@@ -37,6 +49,10 @@ class InvestigationIntegrationTest {
     @Autowired dev.orchestrationlab.incident.orchestration.application.IncidentOrchestrator orchestrator;
     @Autowired org.springframework.jdbc.core.JdbcTemplate jdbc;
     UUID owner;
+    /**
+     * Yalnızca test veritabanındaki denetim/eylem/inceleme/kullanıcı kayıtlarını bağımlılık sırasıyla
+     * temizler ve yeni test sahibini oluşturur.
+     */
     @BeforeEach void reset() {
         jdbc.update("DELETE FROM investigation_audit");
         jdbc.update("DELETE FROM mock_remediation_actions");
@@ -44,6 +60,10 @@ class InvestigationIntegrationTest {
         users.deleteAllInBatch();
         owner = users.saveAndFlush(new AppUser(UserProvider.GOOGLE, "owner", null, null, null)).getId();
     }
+    /**
+     * Oluşturulan kaydın doğru sahibiyle saklandığını, sahibi okuyabildiğini, yabancının 404 ve
+     * kimliksizin 401 aldığını doğrular.
+     */
     @Test void createPersistsAndOnlyOwnerCanRead() throws Exception {
         var result = mvc.perform(post("/api/investigations").with(authentication(auth(owner))).with(csrf())
                         .contentType("application/json").content("{\"question\":\"Why is recommendation failing?\"}"))
@@ -57,6 +77,10 @@ class InvestigationIntegrationTest {
                 .andExpect(status().isNotFound());
         mvc.perform(get("/api/investigations/" + id)).andExpect(status().isUnauthorized());
     }
+    /**
+     * CSRF’siz oturumlu ve oturumsuz CSRF’li oluşturma isteklerinin reddedildiğini; kayıt oluşmadığını
+     * kontrol eder.
+     */
     @Test void unsafeEndpointRequiresCsrfAndAuthentication() throws Exception {
         mvc.perform(post("/api/investigations").with(authentication(auth(owner)))
                 .contentType("application/json").content("{\"question\":\"test\"}")).andExpect(status().isForbidden());
@@ -64,6 +88,9 @@ class InvestigationIntegrationTest {
                 .contentType("application/json").content("{\"question\":\"test\"}")).andExpect(status().isUnauthorized());
         assertThat(investigations.count()).isZero();
     }
+    /**
+     * Boş soru, 4000 karakteri aşan soru ve artık bulunmayan sahibin kayıt oluşturamadığını sınar.
+     */
     @Test void rejectsEmptyOversizedAndStaleOwner() {
         assertThatThrownBy(() -> service.create(owner, " ")).isInstanceOf(IllegalArgumentException.class);
         assertThatThrownBy(() -> service.create(owner, "x".repeat(4001))).isInstanceOf(IllegalArgumentException.class);
@@ -71,11 +98,18 @@ class InvestigationIntegrationTest {
                 .isInstanceOf(InvestigationService.MissingOwner.class);
         assertThat(investigations.count()).isZero();
     }
+    /**
+     * Null soru için iç hata ayrıntısı yerine güvenli 400 ProblemDetail yanıtı bekler.
+     */
     @Test void invalidQuestionReturnsSafe400() throws Exception {
         mvc.perform(post("/api/investigations").with(authentication(auth(owner))).with(csrf())
                 .contentType("application/json").content("{\"question\":null}"))
                 .andExpect(status().isBadRequest()).andExpect(jsonPath("$.detail").value("Invalid investigation request"));
     }
+    /**
+     * Tipli sınıflandırma ve kanıtın JSONB’den aynı değerlerle geri geldiğini doğrular. Sırasız geçiş
+     * ve yabancı sahip güncellemesi reddedilir.
+     */
     @Test void typedContextAndClassificationRoundTripThroughPostgresWithStrictTransitions() {
         var investigation = service.create(owner, "database pool exhausted");
         var classification = new dev.orchestrationlab.incident.reasoning.application.IncidentClassification(
@@ -96,6 +130,10 @@ class InvestigationIntegrationTest {
         assertThatThrownBy(() -> state.begin(owner, investigation.id())).isInstanceOf(IllegalStateException.class);
         assertThatThrownBy(() -> state.begin(UUID.randomUUID(), investigation.id())).isInstanceOf(InvestigationService.NotFound.class);
     }
+    /**
+     * Raporun onay öncesi kaydedildiğini, yabancı/CSRF’siz kararın reddedildiğini ve sahip onayı
+     * sonrası tekrar tamamlatmanın ikinci mock eylem üretmediğini sınar.
+     */
     @Test void investigationRequiresOwnerApprovalAndActionIsIdempotent() throws Exception {
         var created = service.create(owner, "recommendation database connection pool exhausted");
         var waiting = orchestrator.run(owner, created.id());
@@ -112,6 +150,9 @@ class InvestigationIntegrationTest {
         assertThat(jdbc.queryForObject("SELECT count(*) FROM mock_remediation_actions", Integer.class)).isEqualTo(1);
         assertThat(service.read(owner, created.id()).status().name()).isEqualTo("COMPLETED");
     }
+    /**
+     * Ret kararının DENIED/COMPLETED ürettiğini ve mock eylem tablosuna kayıt eklemediğini doğrular.
+     */
     @Test void deniedActionCompletesWithoutExecution() {
         var created = service.create(owner, "recommendation database failing");
         orchestrator.run(owner, created.id());
@@ -120,6 +161,10 @@ class InvestigationIntegrationTest {
         assertThat(result.approval().name()).isEqualTo("DENIED");
         assertThat(jdbc.queryForObject("SELECT count(*) FROM mock_remediation_actions", Integer.class)).isZero();
     }
+    /**
+     * Kaynakları erişilemez yaparak zorunlu DATABASE hatasını sınar. Kısmi hata paketi saklanmalı,
+     * rapor oluşmamalı ve inceleme FAILED olmalıdır.
+     */
     @Test void requiredEvidenceFailureIsPersistedAndNoRemediationIsProposed() throws Exception {
         var execution = org.mockito.Mockito.mock(dev.orchestrationlab.incident.tool.application.ToolExecutionService.class);
         org.mockito.Mockito.when(execution.execute(org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.any()))
@@ -138,15 +183,31 @@ class InvestigationIntegrationTest {
             assertThat(service.read(owner, created.id()).evidence()).isEqualTo(failed.evidence());
         } finally { var close = collector.getClass().getDeclaredMethod("close"); close.setAccessible(true); close.invoke(collector); }
     }
+    /**
+     * Kalıcı başlangıç istenen oluşturmanın CREATED kaydıyla aynı commit içinde start_requested=true
+     * sakladığını kontrol eder.
+     */
     @Test void startIntentCommitsTogetherWithInvestigationBeforeAnyTemporalCall() {
         var created = service.create(owner, "question", true);
         assertThat(jdbc.queryForObject("SELECT start_requested FROM incident_investigations WHERE id = ?", Boolean.class, created.id())).isTrue();
         assertThat(created.status().name()).isEqualTo("CREATED");
     }
+    /**
+     * Verilen dahili UUID için yalnızca testte kullanılan doğrulanmış Authentication oluşturur;
+     * production giriş ucu eklemez.
+     * @param id İşlem yapılan dahili kayıt veya kanıt kimliği.
+     */
     static UsernamePasswordAuthenticationToken auth(UUID id) {
         return UsernamePasswordAuthenticationToken.authenticated(new TestPrincipal(id), null, List.of());
     }
+    /**
+     * Yalnızca test derlemesinde verilen UUID’yi güvenilir principal olarak sunar; production kimlik
+     * doğrulama yolu değildir.
+     */
     record TestPrincipal(UUID getUserId) implements ApplicationPrincipal {
+        /**
+         * Test principal adını verilen dahili UUID’nin metni olarak döndürür.
+         */
         @Override public String getName() { return getUserId.toString(); }
     }
 }

@@ -7,13 +7,24 @@ import dev.orchestrationlab.incident.orchestration.application.WorkflowRoutingPo
 import dev.orchestrationlab.incident.tool.application.*;
 import static org.assertj.core.api.Assertions.*;
 
+/**
+ * Bağlam seçimi, kanıt bütçeleri, maskeleme, hata türü ve kırpma bilgisini dış servis olmadan sınar.
+ */
 class ContextTest {
+    /**
+     * Araç bütçesi küçültülünce zorunlu METRICS kaynağının ilk seçildiğini ve toplam kaynak sayısının
+     * sınırlandığını doğrular.
+     */
     @Test void selectionPrioritizesRequiredSourcesAndHonorsToolBudget() {
         var builder = new ContextBuilder(new ContextBudget(3, 100, 150, 2));
         var selection = builder.select(new WorkflowRoutingPolicy.Route(Set.of(ToolKind.values()), Set.of(ToolKind.METRICS)));
         assertThat(selection.sources()).hasSize(2).startsWith(ToolKind.METRICS);
         assertThat(selection.required()).containsExactly(ToolKind.METRICS);
     }
+    /**
+     * Öğe/kaynak/toplam karakter bütçelerinin birlikte uygulandığını, seçilmeyen kaynağın atıldığını
+     * ve kırpmanın açıkça raporlandığını sınar.
+     */
     @Test void evidenceHasSourceItemAndTotalBoundsWithExplicitTruncation() {
         var builder = new ContextBuilder(new ContextBudget(3, 100, 150, 2));
         var selection = new ContextSelection(List.of(ToolKind.LOGS, ToolKind.DATABASE), Set.of(ToolKind.LOGS));
@@ -26,6 +37,10 @@ class ContextTest {
         assertThat(bundle.truncated()).isTrue();
         assertThat(bundle.items()).noneMatch(item -> item.source() == ToolKind.METRICS);
     }
+    /**
+     * Parola, anahtar ve e-postanın maskelendiğini; dokümantasyon timeout’unun tipli ve degraded
+     * olarak görünür olduğunu doğrular.
+     */
     @Test void sanitizationPrecedesTruncationAndFailureIsTyped() {
         var builder = new ContextBuilder(new ContextBudget(3, 100, 150, 2));
         var bundle = builder.build(new ContextSelection(List.of(ToolKind.LOGS, ToolKind.DOCUMENTATION), Set.of(ToolKind.LOGS)),
@@ -35,6 +50,9 @@ class ContextTest {
                 .doesNotContain("privateValue", "topsecret", "user@example.com");
         assertThat(bundle.degraded()).isTrue();
     }
+    /**
+     * Sıfır öğe veya dörtten fazla araç bütçesinin constructor’da reddedildiğini sınar.
+     */
     @Test void invalidBudgetsFailAtConfigurationTime() {
         assertThatThrownBy(() -> new ContextBudget(0, 100, 100, 4)).isInstanceOf(IllegalArgumentException.class);
         assertThatThrownBy(() -> new ContextBudget(10, 100, 100, 5)).isInstanceOf(IllegalArgumentException.class);

@@ -14,11 +14,13 @@
     <version>0.0.1-SNAPSHOT</version>
     <name>AI Incident Orchestrator</name>
     <description>Local foundation for AI Incident Orchestrator</description>
+    <!-- Java dil sürümü ve Spring AI/Temporal bağımlılık sürümleri burada sabitlenir. -->
     <properties>
         <java.version>25</java.version>
         <spring-ai.version>2.0.1</spring-ai.version>
         <temporal.version>1.40.0</temporal.version>
     </properties>
+    <!-- BOM uyumlu Spring AI sürümlerini yönetir; tek başına kütüphane eklemez. -->
     <dependencyManagement>
         <dependencies>
             <dependency>
@@ -30,6 +32,8 @@
             </dependency>
         </dependencies>
     </dependencyManagement>
+    <!-- Çalışma zamanı: MVC/güvenlik/kalıcılık/Redis, model/MCP, workflow ve gözlemleme.
+         scope=test bağımlılıkları yalnızca doğrulamada kullanılır; production giriş yolu eklemez. -->
     <dependencies>
         <dependency><groupId>org.springframework.boot</groupId><artifactId>spring-boot-starter-opentelemetry</artifactId></dependency>
         <dependency><groupId>io.temporal</groupId><artifactId>temporal-opentracing</artifactId><version>${temporal.version}</version></dependency>
@@ -111,6 +115,7 @@
             <scope>test</scope>
         </dependency>
     </dependencies>
+    <!-- Spring Boot plugin’i çalıştırılabilir JAR üretir; Maven Wrapper yalnızca Maven’ı temin eder. -->
     <build>
         <plugins>
             <plugin>

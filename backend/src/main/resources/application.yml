@@ -1,3 +1,5 @@
+# Ortak varsayılanlar; etkin application-<profil>.yml dosyaları bunları geçersiz kılabilir.
+# HttpSession yalnızca çerezle izlenir; HttpOnly JavaScript erişimini kapatır, Secure HTTPS ister.
 server:
   servlet:
     session:
@@ -11,6 +13,7 @@ server:
         secure: true
 
 spring:
+  # Dış modeller ve MCP otomatik istemcisi varsayılan kapalıdır; profil/Java adaptörleri bilinçli açar.
   ai:
     mcp:
       client:
@@ -26,6 +29,7 @@ spring:
   application:
     name: ai-incident-orchestrator
   jpa:
+    # Hibernate şema üretmez, Flyway’in oluşturduğu şemayı doğrular; HTTP render boyunca transaction tutulmaz.
     open-in-view: false
     hibernate:
       ddl-auto: validate
@@ -37,6 +41,7 @@ spring:
         enabled: false
 
 management:
+  # HTTP sağlık ayrıntıları gizlidir. Readiness yalnızca DB’yi kapsar; Redis/MCP/Temporal sağlığı değildir.
   otlp:
     metrics:
       export:
@@ -57,6 +62,7 @@ management:
           include: db
 
 app:
+  # Redis kabulü varsayılan isteğe bağlıdır; container profili enabled=true ile bunu etkinleştirir.
   rate-limit:
     enabled: ${INVESTIGATION_RATE_LIMIT_ENABLED:false}
     limit: ${INVESTIGATION_RATE_LIMIT:5}

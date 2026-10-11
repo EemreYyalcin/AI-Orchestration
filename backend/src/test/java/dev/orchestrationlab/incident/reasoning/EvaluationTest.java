@@ -8,7 +8,15 @@ import dev.orchestrationlab.incident.context.application.*;
 import dev.orchestrationlab.incident.tool.application.*;
 import static org.assertj.core.api.Assertions.*;
 
+/**
+ * Paketlenmiş TSV örnekleriyle çevrimdışı sınıflandırma/route/atıf sözleşmelerini değerlendirir.
+ * Sonuçlar gerçek model teşhis kalitesi, maliyeti veya gecikmesi ölçümü değildir.
+ */
 class EvaluationTest {
+    /**
+     * TSV’deki her soruyu deterministik modelle sınıflandırıp beklenen tür/kaynağı ve SIMULATED sentez
+     * atıflarını denetler.
+     */
     @Test void datasetEvaluatesClassificationRouteReportAndCitationsWithoutCredentials() throws Exception {
         var dataset = new org.springframework.core.io.ClassPathResource("evaluations/incidents.tsv").getContentAsString(StandardCharsets.UTF_8);
         var model = new FakeIncidentReasoningModel(); var routes = new WorkflowRoutingPolicy();
@@ -21,6 +29,10 @@ class EvaluationTest {
             assertThat(report.synthesis().evidenceIds()).containsExactly("SOURCE-1"); assertThat(report.synthesis().summary()).contains("SIMULATED");
         }
     }
+    /**
+     * v1 politika metinlerini kontrol eder; path traversal prompt adı ve URL biçimli araç servisi gibi
+     * güvenilmeyen seçimleri reddeder.
+     */
     @Test void versionedPolicyCannotBeSelectedFromUntrustedInput() {
         assertThat(PromptCatalog.load("synthesis")).contains("synthesis/v1", "UNTRUSTED DATA", "explicit owner approval");
         assertThat(PromptCatalog.load("classification")).contains("classification/v1");

@@ -1,6 +1,23 @@
 # AI Incident Orchestrator — çalışma durumu
 
-**Son inceleme: 2026-10-08, Europe/Istanbul.** Bu kayıt ilk sistem envanteri ve dokümantasyon görevinin sonucudur. Ayrıntılı mimari [PROJECT_CONTEXT.md](../PROJECT_CONTEXT.md), kısa harita [ARCHITECTURE.md](ARCHITECTURE.md), eğitim içeriği alanı [LEARNING_GUIDE.md](LEARNING_GUIDE.md) içindedir.
+**Son çalışma: 2026-10-11, Europe/Istanbul.** Ayrıntılı mimari [PROJECT_CONTEXT.md](../PROJECT_CONTEXT.md), kısa harita [ARCHITECTURE.md](ARCHITECTURE.md), kod okuma rehberi [KOD_REHBERI.md](../KOD_REHBERI.md), eğitim içeriği alanı [LEARNING_GUIDE.md](LEARNING_GUIDE.md) içindedir. Aşağıdaki 2026-10-08 envanter ve kontroller tarihsel olarak korunmuştur.
+
+## 2026-10-11 — Türkçe kaynak açıklamaları ve yeni kontroller
+
+91 Java kaynak/test dosyasındaki 116 sınıf/arayüz/enum/record ve 368 metot/constructor için Türkçe Javadoc eklendi. Mevcut 34 iç yorum Türkçeye çevrildi. Altı TypeScript/TSX dosyası, CSS/HTML, yapılandırmalar ve derleme dosyaları açıklandı; [KOD_REHBERI.md](../KOD_REHBERI.md) oluşturuldu ve README’ye bağlandı. Çalışma davranışı, modelin gördüğü prompt/@Tool metinleri, runbook içerikleri, test verisi, bağımlılıklar ve migration’lar korundu. Kaynak dosyalarının UTF-8 Türkçe harfleri doğrulandı.
+
+| Yeni çalıştırılan kontrol | Sonuç ve sınır |
+| --- | --- |
+| Backend JDK 25.0.2 ile `rtk mvn -B verify` | 83 test seçildi: 60 başarılı, 0 assertion failure, 23 error; BUILD FAILURE. İlk kök hata Testcontainers’ın geçerli Docker ortamı bulamamasıydı; kalan PostgreSQL bağlam hataları bunun sonucudur. `DurableApiIntegrationTest` 1, `InvestigationIntegrationTest` 9, `UserPersistenceIntegrationTest` 12 ve Redis kullanan `RateLimitTest` metodu 1 hata verdi. Bunlar başarılı doğrulama sayılmaz. |
+| Docker gerektirmeyen seçilmiş backend kontrolleri, JDK 25.0.2, `rtk mvn -B -Dtest=... verify` | **60 test, 0 failure/error/skipped; BUILD SUCCESS.** GoogleOidcUserServiceTest, OAuthSecurityFlowTest, SubmissionTest, ClassificationTest, ContextTest, EvaluationTest, McpUnavailableTest, OrchestrationTest, TelemetryTest, ToolCallingTest, SecurityRequestTest, ActivityTimeoutTest, InvestigationWorkflowTest ve yalnızca RateLimitTest#unavailableRedisFailsClosedBeforeModelWork seçildi. Yeni Surefire XML sonuçları ayrıca okundu. |
+| MCP, JDK 25.0.2, mevcut backend wrapper ile `../../backend/mvnw.cmd -B verify` | **2 test, 0 failure/error/skipped; BUILD SUCCESS.** Gerçek yerel Streamable HTTP keşif/çağrı ve girdi sınırları geçti. MCP dizininde wrapper/global Maven olmadığından ilk `rtk mvn` çağrısı PATH hatası verdi; mevcut wrapper ile giderildi. |
+| Frontend, mevcut Node runtime ile `typescript/bin/tsc --noEmit`, ardından `vite/bin/vite.js build` | **İkisi de exit 0.** İlk `npm run build` çağrısında npm PATH’te bulunamadı; package.json build script’inin aynı iki adımı mevcut kurulu araçlarla doğrudan çalıştırıldı. Yeni bağımlılık kurulmadı. |
+| Yorum kapsamı ve davranış koruma | Java AST ile bütün 484 bildirimin başında Türkçe Javadoc bulundu; 91 dosyanın yorum dışı token tür/değer sırası başlangıçla eşit. Altı TypeScript/TSX dosyası için aynı kontrol geçti. YAML/Docker/nginx/env yorum dışı içerik, XML öğe/değerleri ve CSS/HTML içerikleri aynı; V1–V6 SQL dosyaları bayt düzeyinde eşit. |
+| UTF-8 ve `git diff --check` | Türkçe açıklamalar geçerli UTF-8; kontrol edilen dosyalarda bozuk karakter işareti yok. Son whitespace kontrolü başarılı. |
+
+Docker/Compose servisleri başlatılmadı, yeniden başlatılmadı veya volume’lar değiştirilmedi. `*Smoke` kontrolleri ve canlı Google/OpenAI çağrıları çalıştırılmadı. Yerel MCP test sunucusu ve Temporal test ortamı yalnızca testler tarafından açılıp kapatıldı. 2026-10-08 tarihindeki altı healthy servis ve 83 backend test sonucu, bugünkü ortamın sağlık veya tam test başarısı olarak aktarılmamalıdır. Son küçük iç yorum/boşluk düzenlemelerinden sonra davranış koruma kontrolü tekrar yapıldı; yeni test çalıştırması iddia edilmez.
+
+## 2026-10-08 — önceki envanter kaydı
 
 ## Tamamlanan kapsam
 

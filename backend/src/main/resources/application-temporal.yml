@@ -1,3 +1,5 @@
+# temporal profili backend sürecindeki worker’a deterministik workflow ve dış işi yapan Activity bean’ini bağlar.
+# Namespace/kuyruk sabittir. PT1H ISO-8601 biçiminde bir saatlik kalıcı onay bekleme varsayılanıdır.
 spring:
   temporal:
     namespace: default

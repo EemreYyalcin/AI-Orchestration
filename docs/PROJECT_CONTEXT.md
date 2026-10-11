@@ -1,5 +1,7 @@
 # AI Incident Orchestrator — yaşayan proje bağlamı
 
+**2026-10-11 kaynak açıklaması çalışması:** 91 Java kaynak/test dosyasındaki 116 tür ve 368 metot/constructor Türkçe Javadoc ile açıklandı; React/TypeScript, CSS/HTML, profil yapılandırmaları, Compose, Dockerfile, POM ve ortam şablonuna geliştirici açıklamaları eklendi. Başlangıç okuma sırası, kavramlar ve migration açıklamaları [KOD_REHBERI.md](KOD_REHBERI.md) içindedir. Çalıştırılabilir Java/TypeScript token’ları ve yapılandırma değerleri korundu; Flyway V1–V6 dosyaları bayt düzeyinde aynı kaldı. Prompt, runbook, değerlendirme verisi ve bağımlılık kilitleri değiştirilmedi. Yeni kontroller: Docker gerektirmeyen 60 backend testi ve MCP’nin 2 testi başarılı; frontend tip kontrolü/üretim derlemesi başarılı. Tam backend verify denemesinde Docker ortamı bulunamadığından 23 hata oluştu; bu çalışmada 83 testin tamamı başarılı sayılmaz. Ayrıntılı ve geçmişten ayrı sonuç [STATE.md](ai-orchestration/STATE.md) içindedir.
+
 **Güncel mimari için esas başvuru dokümanı.** Depo kaynaklarıyla **2026-10-08** tarihinde karşılaştırılmıştır. Checkpoint 14'e kadar tamamlanan bütünleşik uygulamayı açıklar. Önceki checkpoint dokümanları tarihsel kararları ve doğrulamaları korur; güncel mimariye alternatif şartnameler değildir.
 
 ## Bakım Sözleşmesi

@@ -1,15 +1,26 @@
 import { useEffect, useState } from 'react';
 import Investigations from './Investigations';
 
+/** Backend’in güvenli profil DTO’su; sağlayıcı token’ı veya ham OIDC claim taşımaz. */
 type CurrentUser = { id: string; email: string | null; displayName: string | null; avatarUrl: string | null };
+/** Ayrışımlı birleşim: user alanı yalnızca authenticated durumunda okunabilir. */
 type AuthState = { kind: 'loading' | 'unauthenticated' | 'error' } | { kind: 'authenticated'; user: CurrentUser };
+/** Durum değiştirici isteğe eklenecek oturum token’ı ve backend’in seçtiği başlık adı. */
 type Csrf = { token: string; headerName: string };
 
+/**
+ * Göreli URL’ye oturum çerezleriyle istek yapar; varsayılan önbellek kapalı ve süre 10 saniyedir.
+ * init en son yayıldığı için çağıran bu varsayılanları değiştirebilir. Kimlik bilgileri localStorage’a yazılmaz.
+ */
 async function request(path: string, init: RequestInit = {}) {
   return fetch(path, { credentials: 'same-origin', cache: 'no-store',
     signal: AbortSignal.timeout(10000), ...init });
 }
 
+/**
+ * Oturuma bağlı güncel CSRF token’ını alır ve yanıtın biçimini çalışma zamanında doğrular.
+ * Token POST isteğinde headerName başlığıyla gönderilir; CSRF kullanıcı kimliğini doğrulamaz.
+ */
 async function csrf(): Promise<Csrf> {
   const response = await request('/api/csrf');
   if (!response.ok) throw new Error('Unable to obtain CSRF state');
@@ -20,6 +31,7 @@ async function csrf(): Promise<Csrf> {
   return { token: value.token, headerName: value.headerName };
 }
 
+/** JSON’daki unknown değeri profil DTO’suna daraltır; id zorunlu, profil alanları string veya null olmalıdır. */
 function isUser(value: unknown): value is CurrentUser {
   if (typeof value !== 'object' || value === null) return false;
   return 'id' in value && typeof value.id === 'string'
@@ -28,11 +40,17 @@ function isUser(value: unknown): value is CurrentUser {
     && 'avatarUrl' in value && (value.avatarUrl === null || typeof value.avatarUrl === 'string');
 }
 
+/** Yalnızca geçerli HTTPS avatar URL’sini gösterime açar; hatalı veya farklı protokollü adresi gizler. */
 function safeAvatar(url: string | null): string | undefined {
   if (!url) return undefined;
   try { return new URL(url).protocol === 'https:' ? url : undefined; } catch { return undefined; }
 }
 
+/**
+ * Ana React bileşeni: oturum ve HTTP sağlığını yükler, Google girişine yönlendirir ve çıkışı yönetir.
+ * Oturum doğrulanınca Investigations ekranını açar. Erişim yetkisini backend belirler;
+ * arayüz state’i yalnızca mevcut görünümü temsil eder.
+ */
 export default function App() {
   const [auth, setAuth] = useState<AuthState>({ kind: 'loading' });
   const [health, setHealth] = useState('CHECKING');
@@ -41,9 +59,12 @@ export default function App() {
   const [attempt, setAttempt] = useState(0);
   const loginFailed = new URLSearchParams(window.location.search).get('login') === 'failed';
 
+  // İlk açılışta ve Retry ile oturum/sağlık yeniden okunur. active, eski async yanıtın
+  // kapanmış veya yeni denemeye geçmiş bileşenin state’ini değiştirmesini önler.
   useEffect(() => {
     let active = true;
     setAuth({ kind: 'loading' });
+    /** /api/me ile oturumu kurar; girişin yenilediği CSRF bilgisini profil görünümünden önce alır. */
     async function bootstrap() {
       try {
         const response = await request('/api/me');
@@ -54,7 +75,7 @@ export default function App() {
         if (!response.ok) throw new Error('Unable to load current user');
         const user: unknown = await response.json();
         if (!isUser(user)) throw new Error('Invalid current user response');
-        await csrf(); // Login clears the previous token: obtain fresh session CSRF state.
+        await csrf(); // Giriş eski token’ı temizler; yeni oturumun CSRF bilgisini al.
         if (active) setAuth({ kind: 'authenticated', user });
       } catch {
         if (active) setAuth({ kind: 'error' });
@@ -69,6 +90,10 @@ export default function App() {
     return () => { active = false; };
   }, [attempt]);
 
+  /**
+   * Güncel CSRF ile POST /logout gönderir; 204 teyidi sonrası profil ekranını kapatır.
+   * Belirsiz ağ hatasında oturumun kapandığını varsaymaz, kullanıcıya yeniden kontrol mesajı gösterir.
+   */
   async function logout() {
     setBusy(true);
     setMessage('');

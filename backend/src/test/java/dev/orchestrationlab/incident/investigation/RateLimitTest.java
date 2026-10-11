@@ -9,7 +9,15 @@ import java.time.Duration;
 import java.util.UUID;
 import dev.orchestrationlab.incident.investigation.application.InvestigationStartLimiter;
 import static org.assertj.core.api.Assertions.*;
+/**
+ * Kabul kontrolünün gerçek Redis container’ında atomiklik/sona erme davranışını ve kesintide kapalı
+ * politikasını sınar.
+ */
 class RateLimitTest {
+    /**
+     * Aynı kullanıcı için pencere limitini, başka kullanıcı ayrımını ve süre dolduktan sonra yeniden
+     * kabulü gerçek Redis ile doğrular.
+     */
     @Test void realRedisIsAtomicPerUserAndExpires() {
         try (var container = new GenericContainer<>("redis:8").withExposedPorts(6379)) {
             container.start();
@@ -26,6 +34,10 @@ class RateLimitTest {
             } finally { factory.destroy(); }
         }
     }
+    /**
+     * Redis erişim hatasının kabulü 503 ile durdurduğunu doğrular; sınırlayıcı kesintide isteği
+     * geçirmez.
+     */
     @Test void unavailableRedisFailsClosedBeforeModelWork() {
         var redis = org.mockito.Mockito.mock(StringRedisTemplate.class);
         org.mockito.Mockito.when(redis.execute(org.mockito.ArgumentMatchers.any(org.springframework.data.redis.core.script.RedisScript.class),

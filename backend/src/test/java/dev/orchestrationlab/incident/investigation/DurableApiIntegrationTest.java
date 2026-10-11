@@ -20,17 +20,34 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.*;
 
+/**
+ * MockMvc API, gerçek PostgreSQL Testcontainer ve Temporal test sunucusunu birlikte sınar. Çevrimdışı
+ * model kullanır; gerçek Google/OpenAI veya dış Temporal cluster gerektirmez.
+ */
 @SpringBootTest(properties = {"spring.temporal.test-server.enabled=true", "app.workflow.dispatch-delay=60000"})
 @ActiveProfiles("temporal") @AutoConfigureMockMvc
 @Import(DurableApiIntegrationTest.Database.class)
 class DurableApiIntegrationTest {
+    /**
+     * Bu test sınıfına gerçek PostgreSQL 18 Testcontainer sağlayan yapılandırmadır; @ServiceConnection
+     * bağlantı özelliklerini Spring’e aktarır.
+     */
     @TestConfiguration(proxyBeanMethods = false) static class Database {
+        /**
+         * İzole PostgreSQL 18 test container’ı oluşturur; yaşam döngüsünü Spring/Testcontainers
+         * yönetir.
+         */
         @Bean @ServiceConnection PostgreSQLContainer postgres() { return new PostgreSQLContainer("postgres:18"); }
     }
     @Autowired MockMvc mvc;
     @Autowired AppUserRepository users;
     @Autowired InvestigationService service;
     @Autowired JdbcTemplate jdbc;
+    /**
+     * Oturum+CSRF ile oluşturmanın kalıcı workflow başlattığını ve onay beklediğini doğrular. Yabancı
+     * sahip/CSRF eksikliği reddedilir; sahip onayı sonrası rapor, tek mock eylem ve denetim kayıtları
+     * PostgreSQL’de kontrol edilir.
+     */
     @Test void authenticatedCreateStartsDurableWorkflowOwnerApprovesAndReportIsPersisted() throws Exception {
         UUID owner = users.saveAndFlush(new AppUser(UserProvider.GOOGLE, "durable-owner", null, null, null)).getId();
         var response = mvc.perform(post("/api/investigations").with(authentication(InvestigationIntegrationTest.auth(owner))).with(csrf())

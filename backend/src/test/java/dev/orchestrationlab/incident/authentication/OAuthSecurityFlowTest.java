@@ -52,7 +52,10 @@ import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
-/** Loopback OIDC provider with signed tokens: no real credentials or Google network calls. */
+/**
+ * Gerçek Spring Security OIDC akışını loopback HTTP test sağlayıcısıyla sınar. State, nonce, imza,
+ * oturum, profil DTO ve CSRF/çıkış ilişkisini doğrular; sağlayıcı test sunucusudur, Google değildir.
+ */
 @WebMvcTest(controllers = {CurrentUserController.class, CsrfController.class},
         excludeAutoConfiguration = UserDetailsServiceAutoConfiguration.class)
 @Import(SecurityConfiguration.class)
@@ -71,9 +74,13 @@ class OAuthSecurityFlowTest {
     @MockitoBean UserProvisioningService provisioning;
     @MockitoBean CurrentUserService currentUsers;
 
+    /**
+     * Dinamik test portundaki token/JWKS/UserInfo uçlarını google istemci kaydına bağlar; gerçek
+     * Google kimlik bilgisi kullanmaz.
+     */
     @DynamicPropertySource
     static void registration(DynamicPropertyRegistry properties) {
-        // Exercise application-google.yml itself; credentials and provider endpoints are fixtures only.
+        // Gerçek application-google.yml kullanılır; kimlik bilgileri ve sağlayıcı uçları test fixture’ıdır.
         properties.add("GOOGLE_CLIENT_ID", () -> CLIENT);
         properties.add("GOOGLE_CLIENT_SECRET", () -> "test-only-secret");
         String provider = "spring.security.oauth2.client.provider.google.";
@@ -83,15 +90,29 @@ class OAuthSecurityFlowTest {
         properties.add(provider + "user-info-uri", () -> base() + "/userinfo");
     }
 
+    /**
+     * Her test öncesi nonce, bozuk imza seçimi ve token çağrı sayacını sıfırlar.
+     */
     @BeforeEach void resetFixture() { nonce = null; invalidSignature = false; tokenCalls.set(0); }
+    /**
+     * Sınıf testleri bitince loopback sağlayıcı HTTP sunucusunu kapatır.
+     */
     @AfterAll static void stopProvider() { PROVIDER.stop(0); }
 
+    /**
+     * Tarayıcı HTML kabul etse bile kimliksiz /api/me yanıtının giriş yönlendirmesi yerine 401
+     * olduğunu doğrular.
+     */
     @Test void anonymousMeIs401EvenForBrowserHtml() throws Exception {
         mvc.perform(get("/api/me").accept("text/html"))
                 .andExpect(status().isUnauthorized()).andExpect(header().doesNotExist("Location"));
         verifyNoInteractions(provisioning, currentUsers);
     }
 
+    /**
+     * Giriş yönlendirmesinin sabit callback, gerekli scope, state ve nonce parametrelerini içerdiğini
+     * doğrular.
+     */
     @Test void authorizationRequestUsesExactCallbackScopesStateAndNonce() throws Exception {
         var start = start();
         assertThat(start.parameters()).containsEntry("redirect_uri", "http://localhost:5173/login/oauth2/code/google")
@@ -102,6 +123,10 @@ class OAuthSecurityFlowTest {
         assertThat(start.parameters()).doesNotContainKeys("access_type", "redirect");
     }
 
+    /**
+     * Framework callback’ini tamamlayıp kullanıcı kaydının oturumdan önce yapıldığını sınar. UUID’li
+     * güvenli DTO, protokol verisinin dışarı sızmaması ve oturum/CSRF/çıkış davranışını kontrol eder.
+     */
     @Test void completeFrameworkCallbackProvisionsBeforeSessionAndReturnsOnlySafeDto() throws Exception {
         UUID id = UUID.randomUUID();
         var appUser = mock(AppUser.class);
@@ -143,6 +168,10 @@ class OAuthSecurityFlowTest {
         mvc.perform(get("/api/me")).andExpect(status().isUnauthorized());
     }
 
+    /**
+     * Kayıt hatasında callback’in başarısız girişe yönlendiğini ve doğrulanmış SecurityContext
+     * saklanmadığını doğrular.
+     */
     @Test void provisioningFailureCannotSaveAuthenticatedSession() throws Exception {
         when(provisioning.provision(any())).thenThrow(new IllegalStateException("private database details"));
         var start = start();
@@ -155,6 +184,10 @@ class OAuthSecurityFlowTest {
         mvc.perform(get("/api/me").session(start.session())).andExpect(status().isUnauthorized());
     }
 
+    /**
+     * Yanlış state ile callback’in token alışverişi ve kullanıcı kaydından önce reddedildiğini
+     * doğrular.
+     */
     @Test void invalidStateFailsBeforeTokenExchangeAndProvisioning() throws Exception {
         var start = start();
         mvc.perform(get("/login/oauth2/code/google").session(start.session())
@@ -164,6 +197,10 @@ class OAuthSecurityFlowTest {
         verifyNoInteractions(provisioning);
     }
 
+    /**
+     * Yanlış nonce içeren ID token’ın framework tarafından kullanıcı kaydından önce reddedildiğini
+     * doğrular.
+     */
     @Test void invalidNonceFailsFrameworkValidationBeforeProvisioning() throws Exception {
         var start = start();
         nonce = "wrong-nonce";
@@ -174,6 +211,10 @@ class OAuthSecurityFlowTest {
         verifyNoInteractions(provisioning);
     }
 
+    /**
+     * Farklı RSA anahtarıyla imzalanmış ID token’ın kullanıcı kaydına ulaşmadan reddedildiğini
+     * doğrular.
+     */
     @Test void invalidSignatureFailsFrameworkValidationBeforeProvisioning() throws Exception {
         var start = start();
         invalidSignature = true;
@@ -185,6 +226,10 @@ class OAuthSecurityFlowTest {
         assertThat(start.session().getAttribute(HttpSessionSecurityContextRepository.SPRING_SECURITY_CONTEXT_KEY)).isNull();
     }
 
+    /**
+     * MockMvc ile authorization isteğini başlatır, yönlendirme parametrelerini çözer ve test
+     * sağlayıcısının imzalayacağı nonce’u saklar.
+     */
     private Start start() throws Exception {
         var result = mvc.perform(get("/oauth2/authorization/google")).andExpect(status().isFound()).andReturn();
         String query = URI.create(result.getResponse().getRedirectedUrl()).getRawQuery();
@@ -198,15 +243,30 @@ class OAuthSecurityFlowTest {
         return new Start((MockHttpSession) result.getRequest().getSession(false), parameters);
     }
 
+    /**
+     * Test authorization isteğinin HttpSession ve çözümlenmiş state/nonce/yönlendirme parametrelerini
+     * birlikte taşır.
+     */
     private record Start(MockHttpSession session, Map<String, String> parameters) { }
 
+    /**
+     * Test için 2048 bit RSA imza anahtarı üretir; anahtar üretilemezse test sınıfı başlangıcını
+     * durdurur.
+     */
     private static RSAKey key() {
         try { return new RSAKeyGenerator(2048).keyID("test-key").generate(); }
         catch (Exception failure) { throw new ExceptionInInitializerError(failure); }
     }
 
+    /**
+     * Loopback sağlayıcının rastgele atanmış portundan test temel URL’sini üretir.
+     */
     private static String base() { return "http://localhost:" + PROVIDER.getAddress().getPort(); }
 
+    /**
+     * JWKS, UserInfo ve token uçları olan yerel HTTP sağlayıcısını başlatır. Test nonce’unu içeren ID
+     * token üretir; bozuk imza seçeneği doğrulama hatasını sınamak içindir.
+     */
     private static HttpServer provider() {
         try {
             var server = HttpServer.create(new InetSocketAddress("localhost", 0), 0);
@@ -232,6 +292,9 @@ class OAuthSecurityFlowTest {
         } catch (IOException failure) { throw new ExceptionInInitializerError(failure); }
     }
 
+    /**
+     * Test HTTP yanıtını UTF-8 JSON olarak yazar, uzunluğu ayarlar ve exchange kaynağını kapatır.
+     */
     private static void respond(com.sun.net.httpserver.HttpExchange exchange, String body) throws IOException {
         byte[] bytes = body.getBytes(StandardCharsets.UTF_8);
         exchange.getResponseHeaders().set("Content-Type", "application/json");

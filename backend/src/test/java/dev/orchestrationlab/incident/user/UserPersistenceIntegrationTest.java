@@ -45,12 +45,24 @@ import static org.mockito.Mockito.mockingDetails;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
+/**
+ * Gerçek PostgreSQL Testcontainer ile Flyway şeması, kullanıcı kaydı, profil güncellemesi,
+ * benzersizlik ve eşzamanlı ilk giriş tekrarını sınar. Repository spy zamanlamayı denetlerken gerçek
+ * sorgu/insert çalışmaya devam eder.
+ */
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.NONE)
 @Import(UserPersistenceIntegrationTest.PostgresConfiguration.class)
 class UserPersistenceIntegrationTest {
 
+    /**
+     * Kullanıcı kalıcılık testleri için gerçek PostgreSQL 18 container’ını Spring test bağlamına
+     * bağlar.
+     */
     @TestConfiguration(proxyBeanMethods = false)
     static class PostgresConfiguration {
+        /**
+         * Flyway ve Hibernate kontrolleri için gerçek PostgreSQL 18 test container’ı oluşturur.
+         */
         @Bean
         @ServiceConnection
         PostgreSQLContainer postgres() {
@@ -63,11 +75,18 @@ class UserPersistenceIntegrationTest {
     @Autowired JdbcTemplate jdbc;
     @Autowired Flyway flyway;
 
+    /**
+     * Her test öncesinde yalnızca test veritabanındaki kullanıcı kayıtlarını temizler.
+     */
     @BeforeEach
     void clearUsers() {
         users.deleteAllInBatch();
     }
 
+    /**
+     * OIDC adaptörünün gerçek kayıt servisine bağlanarak PostgreSQL kullanıcısını oluşturduğunu
+     * doğrular; OIDC sağlayıcı kısmı test fixture’ıdır.
+     */
     @Test
     void oidcAdapterUsesExistingProvisioningAgainstPostgres() {
         var token = new OidcIdToken(
@@ -89,6 +108,10 @@ class UserPersistenceIntegrationTest {
         assertThat(stored.getEmail()).isEqualTo("adapter@example.com");
     }
 
+    /**
+     * Migration geçmişi/şema ve Hibernate doğrulama ayarlarını kontrol eder; şema oluşturma
+     * sorumluluğu Flyway’dedir.
+     */
     @Test
     void flywayOwnsSchemaAndHibernateValidatesIt() {
         assertThat(flyway.info().current().getVersion().getVersion()).isEqualTo("6");
@@ -110,6 +133,10 @@ class UserPersistenceIntegrationTest {
                 """, Integer.class)).isEqualTo(1);
     }
 
+    /**
+     * Dahili UUID’nin dış subject’ten ayrı üretildiğini ve null profil alanlı kullanıcının tekrar
+     * okunabildiğini doğrular.
+     */
     @Test
     void provisionsAndReloadsUserWithIndependentUuidAndOptionalProfile() {
         AppUser created = provision(UserProvider.GOOGLE, "google-subject", null, null, null);
@@ -128,6 +155,10 @@ class UserPersistenceIntegrationTest {
         assertThat(users.findByProviderAndProviderSubject(UserProvider.GOOGLE, "missing")).isEmpty();
     }
 
+    /**
+     * Tekrarlı girişin aynı UUID/kimlik/oluşturma zamanını koruyup güncel profil alanlarını yazdığını
+     * sınar.
+     */
     @Test
     void repeatedProvisioningUpdatesProfileAndKeepsIdentityAndCreationTime() {
         AppUser original = provision(UserProvider.GOOGLE, "returning-subject",
@@ -150,6 +181,10 @@ class UserPersistenceIntegrationTest {
         assertThat(users.count()).isEqualTo(1);
     }
 
+    /**
+     * Aynı profilin gereksiz güncelleme üretmediğini ve null anlık görüntünün eski profil alanlarını
+     * temizlediğini doğrular.
+     */
     @Test
     void identicalProfileDoesNotRewriteTimestampsAndNullSnapshotClearsProfile() {
         AppUser created = provision(UserProvider.GOOGLE, "unchanged-subject",
@@ -167,6 +202,10 @@ class UserPersistenceIntegrationTest {
         assertThat(cleared.getAvatarUrl()).isNull();
     }
 
+    /**
+     * Aynı e-postalı farklı subject’lerin ayrı kullanıcı olduğunu ve opaque subject’in aynen
+     * saklandığını kontrol eder.
+     */
     @Test
     void differentSubjectsCanShareEmailAndOpaqueSubjectsArePreserved() {
         String email = "shared@example.test";
@@ -178,6 +217,10 @@ class UserPersistenceIntegrationTest {
                 .orElseThrow().getProviderSubject()).isEqualTo("Subject");
     }
 
+    /**
+     * Provider/subject benzersizlik kısıtının ikinci kaydı reddettiğini ve fazladan satır
+     * bırakmadığını sınar.
+     */
     @Test
     void postgresRejectsDuplicateIdentityWithoutLeavingExtraRows() {
         provision(UserProvider.GOOGLE, "duplicate", null, null, null);
@@ -187,6 +230,10 @@ class UserPersistenceIntegrationTest {
         assertThat(users.count()).isEqualTo(1);
     }
 
+    /**
+     * Doğrudan SQL ile bile zorunlu kimlik alanlarının PostgreSQL NOT NULL kısıtlarından geçmediğini
+     * doğrular.
+     */
     @Test
     void postgresRejectsNullIdentityFieldsEvenWhenJpaIsBypassed() {
         assertThatThrownBy(() -> jdbc.update("""
@@ -200,6 +247,10 @@ class UserPersistenceIntegrationTest {
         assertThat(users.count()).isZero();
     }
 
+    /**
+     * Kimlik çakışması dışındaki bütünlük hatasında profil transaction’ının geri alındığını ve
+     * sınırsız/ilgisiz tekrar yapılmadığını sınar.
+     */
     @Test
     void failedProfileUpdateRollsBackAndDoesNotRetryUnrelatedConstraintFailures() {
         AppUser original = provision(UserProvider.GOOGLE, "rollback-subject", "good@example.test", "Before", null);
@@ -220,6 +271,10 @@ class UserPersistenceIntegrationTest {
         }
     }
 
+    /**
+     * İki eşzamanlı gerçek insert’in aynı kimlik için yalnızca bir kullanıcı oluşturabildiğini
+     * doğrular.
+     */
     @Test
     void concurrentInsertsCannotCreateTwoUsersForOneIdentity() throws Exception {
         Callable<Boolean> insert = () -> {
@@ -240,28 +295,36 @@ class UserPersistenceIntegrationTest {
         assertThat(users.count()).isEqualTo(1);
     }
 
+    /**
+     * Kimlik satırı görünmez bırakılarak iki gerçek kısıt hatası üretilir; kayıt servisinin ilk deneme
+     * ve tek tekrar sonrası durduğu doğrulanır.
+     */
     @Test
     void repeatedIdentityConflictStopsAfterTwoAttempts() {
         provision(UserProvider.GOOGLE, "bounded-retry", null, null, null);
-        // Simulate the row remaining invisible to both lookups, but let PostgreSQL
-        // execute and reject both inserts. This exercises the actual constraint path.
+        // Satır iki lookup’ta da görünmez yapılır; ancak PostgreSQL iki insert’i gerçekten
+        // çalıştırıp reddeder. Böylece gerçek benzersizlik kısıtı yolu sınanır.
         doReturn(Optional.empty()).when(users)
                 .findByProviderAndProviderSubject(UserProvider.GOOGLE, "bounded-retry");
         assertThatThrownBy(() -> provision(UserProvider.GOOGLE, "bounded-retry", null, null, null))
                 .isInstanceOf(DataIntegrityViolationException.class);
-        // One lookup for initial creation, then exactly two failed provisioning attempts.
+        // İlk oluşturmanın tek lookup’ı ve ardından tam iki başarısız kayıt denemesi beklenir.
         verify(users, times(3)).findByProviderAndProviderSubject(UserProvider.GOOGLE, "bounded-retry");
         assertThat(users.count()).isEqualTo(1);
     }
 
+    /**
+     * İki ilk girişin eşzamanlı lookup yapmasını latch ile koordine eder. Kaybeden insert yeni
+     * transaction’da tekrar okuyup aynı UUID’yi döndürmeli; toplam tek kullanıcı kalmalıdır.
+     */
     @Test
     void concurrentFirstProvisioningRetriesOnceAndReturnsTheSameUser() throws Exception {
         CountDownLatch bothLookedUp = new CountDownLatch(2);
         AtomicInteger lookups = new AtomicInteger();
-        // The spy only coordinates timing; every lookup/insert still hits PostgreSQL.
+        // Spy yalnızca zamanlamayı koordine eder; her lookup/insert gerçek PostgreSQL’e gider.
         doAnswer(invocation -> {
-            // Spring Data's finder is an interface method; delegate via the spy's
-            // original answer instead of trying to invoke an abstract real method.
+            // Spring Data finder arayüz metodudur; soyut gerçek metodu çağırmaya çalışmak yerine
+            // spy’ın özgün yanıtı üzerinden gerçek repository davranışına delege edilir.
             Object result = mockingDetails(users).getMockCreationSettings().getDefaultAnswer().answer(invocation);
             if (lookups.incrementAndGet() <= 2) {
                 bothLookedUp.countDown();
@@ -285,6 +348,15 @@ class UserPersistenceIntegrationTest {
         assertThat(users.count()).isEqualTo(1);
     }
 
+    /**
+     * Test profil alanlarından güvenilir ExternalIdentity kurup gerçek UserProvisioningService’i
+     * çağırır.
+     * @param provider Doğrulanmış dış kimlik sağlayıcısı.
+     * @param providerSubject Sağlayıcının değişmeden saklanan opaque kullanıcı tanımlayıcısı.
+     * @param email Güncel e-posta; null olabilir ve kimlik anahtarı değildir.
+     * @param displayName Güncel görünen ad; null olabilir.
+     * @param avatarUrl Güncel profil görseli URL’si; null olabilir.
+     */
     private AppUser provision(UserProvider provider, String providerSubject,
                               String email, String displayName, String avatarUrl) {
         return provisioning.provision(new ExternalIdentity(provider, providerSubject, email, displayName, avatarUrl));

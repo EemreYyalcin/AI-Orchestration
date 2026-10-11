@@ -3,8 +3,16 @@ package dev.orchestrationlab.incident.tool.infrastructure;
 import java.util.List;
 import dev.orchestrationlab.incident.tool.application.*;
 
-/** Explicitly simulated read-only telemetry. Replace an adapter, not the tool policy. */
+/**
+ * LOGS/DATABASE/METRICS ve mcp kapalıyken DOCUMENTATION için sabit salt okunur eğitim verisi sağlar.
+ * SIMULATED etiketi gerçek operasyonel sisteme bağlanılmadığını açıkça gösterir; uygulama
+ * PostgreSQL’ini teşhis için sorgulamaz.
+ */
 public record StubEvidenceAdapter(ToolKind kind) implements EvidenceAdapter {
+    /**
+     * Kaynak türüne göre sabit log, havuz, runbook veya metrik cümlesini servis adıyla döndürür. Dış
+     * ağa/veritabanına erişim yapılmaz; yetki ve girdi denetimi üst katmandadır.
+     */
     @Override public List<String> read(ToolInput input) {
         return List.of("SIMULATED " + input.service() + ": " + switch (kind) {
             case LOGS -> "connection acquisition timed out; HTTP dependency timeout recorded";
